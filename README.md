@@ -537,6 +537,4 @@ flowchart LR
 
 Граф — [vis-network](https://visjs.github.io/vis-network/). Шрифты — IBM Plex Sans, DejaVu Sans, Unbounded, Onest, JetBrains Mono.
 
-**Команда:** [Имя Фамилия], [вуз, группа] · [email]
-
-**Лицензия:** [выберите лицензию для кода]. Условия использования датасета Elliptic2 — на его [странице Kaggle](https://www.kaggle.com/datasets/ellipticco/elliptic2-data-set).
+**Команда:** Айдар Н., Жарылкап Б., СИБ-23-5. Условия использования датасета Elliptic2 — на его [странице Kaggle](https://www.kaggle.com/datasets/ellipticco/elliptic2-data-set).
