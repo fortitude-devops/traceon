@@ -1,0 +1,10 @@
+.venv
+.env
+.git
+data
+models
+ml/reports
+**/__pycache__
+**/*.pyc
+.DS_Store
+_update

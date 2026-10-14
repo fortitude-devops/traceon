@@ -1,0 +1,57 @@
+# Traceon: PostgreSQL + сервис (API и интерфейс) + инструменты ML.
+#
+#   docker compose up -d --build                       # база и сайт: http://localhost:8000
+#   docker compose run --rm ml ml/prepare_data.py      # подготовка данных
+#   docker compose run --rm ml ml/train.py             # обучение
+#   docker compose run --rm ml ml/load_db.py           # загрузка в базу
+#   docker compose restart api                         # подхватить новую модель
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql+psycopg://traceon:traceon@db:5432/traceon
+  NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+  NVIDIA_MODEL: ${NVIDIA_MODEL:-meta/llama-3.1-70b-instruct}
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: traceon
+      POSTGRES_PASSWORD: traceon
+      POSTGRES_DB: traceon
+    ports:
+      - "5433:5432"     # 5433 снаружи, чтобы не конфликтовать с PostgreSQL на Mac
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traceon -d traceon"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    environment: *app-env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ml:
+    build: .
+    profiles: ["tools"]
+    environment: *app-env
+    entrypoint: ["python"]
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./ml/reports:/app/ml/reports
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Traceon — ML-сервис для банков Казахстана: оценка риска отмывания в схемах криптовалютных переводов.">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Traceon</title>
+<!-- Адрес демо-скоринга. Пусто — берётся адрес этого сервера + /demo/. Для другого хостинга впишите полный URL. -->
+<meta name="traceon-demo" content="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Лэйаут: тёмный «блокчейн-эксплорер» — узкая колонка текста, широкие визуальные полосы, граф в герое.
+   Один визуальный мир (только тёмная тема) — бренд Traceon. */
+:root {
+  --bg: #0B0E11;        /* фон, как в приложении */
+  --panel: #14181D;
+  --panel-2: #1C2127;
+  --line: #2A3038;
+  --ink: #EAECEF;
+  --ink-2: #B4BBC5;
+  --muted: #7F8996;
+  --amber: #F0B429;     /* бренд и действие */
+  --amber-soft: rgba(240, 180, 41, .12);
+  --low: #2EBD85;
+  --medium: #E8A13A;
+  --high: #F6465D;
+  --violet: #8B7CF6;    /* тип схемы */
+  --cyan: #22C3D6;      /* связи с сетью */
+  --f-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body: "Onest", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --wrap: 1180px;
+  --gutter: clamp(16px, 4vw, 40px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--f-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+h1, h2, h3 { margin: 0; font-weight: 700; text-wrap: balance; }
+p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+::selection { background: var(--amber); color: #111; }
+.wrap { width: 100%; max-width: var(--wrap); margin-inline: auto; padding-inline: var(--gutter); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.tag { font: 500 13px/1.4 var(--f-mono); color: var(--amber); letter-spacing: .02em; }
+.lead { color: var(--ink-2); font-size: clamp(17px, 1.6vw, 19px); max-width: 62ch; }
+section { padding-block: clamp(64px, 9vw, 120px); }
+.h2 { font: 700 clamp(28px, 4.2vw, 48px)/1.12 var(--f-display); letter-spacing: -.01em; margin-top: 14px; max-width: 22ch; }
+.sec-head { display: flex; flex-direction: column; gap: 18px; margin-bottom: clamp(32px, 5vw, 56px); }
+
+/* ---------- Навигация ---------- */
+.nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; background: rgba(11, 14, 17, .82);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo svg { width: 32px; height: 32px; flex: none; }
+.logo b { font: 700 17px var(--f-display); letter-spacing: .02em; }
+.nav-links { display: flex; gap: 24px; margin-left: auto; list-style: none; padding: 0; }
+.nav-links a { text-decoration: none; color: var(--ink-2); font-size: 15px; }
+.nav-links a:hover { color: var(--ink); }
+.btn { display: inline-flex; align-items: center; gap: 10px; font: 600 15px var(--f-body); text-decoration: none;
+  padding: 12px 20px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--amber); border-color: var(--amber); color: #111; }
+.btn.primary:hover { filter: brightness(1.08); }
+.nav .btn { padding: 9px 16px; font-size: 14px; }
+.menu-btn { display: none; margin-left: auto; background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; width: 42px; height: 42px; cursor: pointer; }
+.menu-btn span { display: block; width: 18px; height: 2px; background: currentColor; margin: 4px auto; transition: transform .2s; }
+
+/* ---------- Герой ---------- */
+.hero { position: relative; padding-block: clamp(56px, 8vw, 104px) clamp(40px, 5vw, 64px); overflow: hidden; }
+#net { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, var(--bg) 0%, rgba(11,14,17,.92) 34%, rgba(11,14,17,.25) 62%, rgba(11,14,17,0) 100%),
+              linear-gradient(0deg, var(--bg) 0%, rgba(11,14,17,0) 30%); }
+.hero .wrap { position: relative; z-index: 2; }
+.hero h1 { font: 700 clamp(38px, 6.6vw, 84px)/1.02 var(--f-display); letter-spacing: -.02em; max-width: 13ch; margin-top: 20px; }
+.hero .lead { margin-top: 24px; max-width: 52ch; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+.pill { display: inline-flex; align-items: center; gap: 8px; font: 500 13px var(--f-mono); color: var(--ink-2);
+  border: 1px solid var(--line); background: rgba(20, 24, 29, .7); border-radius: 999px; padding: 6px 14px; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--low); box-shadow: 0 0 10px var(--low); }
+.ticker { position: relative; z-index: 2; margin-top: clamp(48px, 7vw, 88px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line); border-radius: 10px; background: rgba(20, 24, 29, .78); backdrop-filter: blur(6px); overflow: hidden; }
+.ticker div { padding: 16px 20px; border-right: 1px solid var(--line); min-width: 0; }
+.ticker div:last-child { border-right: 0; }
+.ticker small { display: block; color: var(--muted); font-size: 13px; }
+.ticker b { font: 600 clamp(20px, 2.4vw, 28px) var(--f-mono); font-variant-numeric: tabular-nums; }
+.ticker b.acc { color: var(--amber); } .ticker b.up { color: var(--low); }
+.ticker em { font: 400 12px var(--f-mono); color: var(--muted); font-style: normal; margin-left: 6px; }
+
+/* ---------- Демо и QR ---------- */
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: end; }
+.qr-card { display: flex; flex-direction: column; gap: 14px; width: 232px; padding: 16px; border: 1px solid rgba(240, 180, 41, .4);
+  border-radius: 14px; background: rgba(20, 24, 29, .86); backdrop-filter: blur(8px); box-shadow: 0 0 0 6px rgba(240, 180, 41, .05), 0 24px 60px rgba(0, 0, 0, .5); }
+.qr { position: relative; width: 200px; aspect-ratio: 1; max-width: 100%; border-radius: 10px; display: grid; place-items: center;
+  border: 2px dashed rgba(240, 180, 41, .55); color: var(--muted); font: 500 13px/1.4 var(--f-mono); text-align: center; padding: 18px; }
+.qr.ready { background: #fff; border: 0; padding: 14px; }
+.qr.ready span { display: none; }
+.qr img, .qr canvas { width: 100% !important; height: auto !important; display: block; image-rendering: pixelated; }
+.qr::before, .qr::after { content: ""; position: absolute; width: 22px; height: 22px; border: 3px solid var(--amber); }
+.qr::before { top: -6px; left: -6px; border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
+.qr::after { bottom: -6px; right: -6px; border-left: 0; border-top: 0; border-radius: 0 0 8px 0; }
+.qr-card b { font: 600 16px var(--f-body); display: block; }
+.qr-card p { color: var(--ink-2); font-size: 14px; line-height: 1.45; margin-top: 2px; }
+.qr-card a { display: block; margin-top: 8px; font-size: 12.5px; color: var(--amber); word-break: break-all; text-underline-offset: 3px; }
+.btn .arr { display: inline-block; width: 8px; height: 8px; border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: rotate(45deg); }
+
+/* ---------- Бегущая строка ---------- */
+.marquee { border-block: 1px solid var(--line); background: var(--panel); overflow: hidden; padding-block: 16px; }
+.marquee-track { display: flex; width: max-content; gap: 40px; animation: run 48s linear infinite; }
+.marquee-track span { font: 500 15px var(--f-mono); color: var(--ink-2); white-space: nowrap; display: inline-flex; align-items: center; gap: 40px; }
+.marquee-track span::after { content: ""; width: 8px; height: 9px; background: var(--amber); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+@keyframes run { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }
+
+/* ---------- Проблема ---------- */
+.problem-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.problem-grid article { background: var(--panel); padding: clamp(22px, 3vw, 32px); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.problem-grid h3 { font: 600 20px/1.3 var(--f-body); }
+.problem-grid p { color: var(--ink-2); font-size: 16px; }
+.problem-grid .fig { font: 700 clamp(30px, 3.4vw, 40px)/1 var(--f-display); color: var(--high); }
+.src { font-size: 13px; color: var(--muted); }
+.src a { color: var(--muted); text-underline-offset: 3px; }
+.src a:hover { color: var(--ink-2); }
+
+/* ---------- Миссия ---------- */
+.mission { background: radial-gradient(80% 120% at 85% 0%, rgba(240, 180, 41, .10), transparent 60%), var(--panel); border-block: 1px solid var(--line); }
+.mission blockquote { margin: 18px 0 0; font: 500 clamp(24px, 3.3vw, 40px)/1.28 var(--f-display); letter-spacing: -.01em; max-width: 30ch; }
+.goals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: clamp(40px, 5vw, 64px); }
+.goal { border-top: 2px solid var(--amber); padding-top: 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.goal h3 { font: 600 19px/1.35 var(--f-body); }
+.goal p { color: var(--ink-2); font-size: 16px; }
+
+/* ---------- Как работает ---------- */
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: s; position: relative; }
+.step { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px 22px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 38px; height: 44px;
+  font: 700 16px var(--f-display); color: #111; background: var(--amber);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); margin-bottom: 6px; }
+.step h3 { font: 600 18px/1.35 var(--f-body); }
+.step p { color: var(--ink-2); font-size: 15.5px; }
+.step code { font: 13px var(--f-mono); color: var(--amber); }
+
+/* ---------- Результаты ---------- */
+.results { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
+.big-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.big-stats div { background: var(--panel); padding: 24px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.big-stats b { font: 700 clamp(34px, 4.4vw, 56px)/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.big-stats b.acc { color: var(--amber); } .big-stats b.up { color: var(--low); }
+.big-stats span { color: var(--ink-2); font-size: 15px; }
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+.chart h3 { font: 600 18px var(--f-body); }
+.chart .note { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.bars { display: flex; flex-direction: column; gap: 16px; margin-top: 22px; }
+.bar { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 54px; gap: 12px; align-items: center; font-size: 15px; }
+.bar .t { height: 12px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+.bar .t i { display: block; height: 100%; border-radius: 3px; background: #4A5260; }
+.bar.me .t i { background: var(--amber); box-shadow: 0 0 16px rgba(240, 180, 41, .45); }
+.bar.me { color: var(--ink); font-weight: 600; }
+.bar .v { text-align: right; font: 600 15px var(--f-mono); }
+.chart .caveat { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+
+/* ---------- Типы схем ---------- */
+.types { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.type { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.type svg { width: 100%; height: auto; aspect-ratio: 4 / 3; max-width: 100%; background:
+  radial-gradient(rgba(127, 137, 150, .18) 1px, transparent 1px) 0 0 / 14px 14px, var(--bg); border-radius: 8px; border: 1px solid var(--line); }
+.type h3 { font: 600 18px var(--f-body); }
+.type p { color: var(--ink-2); font-size: 15px; }
+.type .ex { font: 13px var(--f-mono); color: var(--muted); margin-top: auto; }
+.type .ex b { color: var(--high); }
+.flow { stroke: var(--violet); stroke-width: 2.2; fill: none; stroke-dasharray: 5 7; animation: dash 1.4s linear infinite; }
+.edge { stroke: #4A5260; stroke-width: 1.6; fill: none; }
+.nd { fill: var(--panel-2); stroke: #6B7584; stroke-width: 2; }
+.nd.hub { fill: var(--violet); stroke: var(--violet); }
+.nd.on { stroke: var(--violet); }
+@keyframes dash { to { stroke-dashoffset: -24; } }
+@media (prefers-reduced-motion: reduce) { .flow { animation: none; } }
+.honest { margin-top: 24px; display: flex; gap: 16px; align-items: flex-start; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--violet); border-radius: 0 10px 10px 0; padding: 18px 20px; }
+.honest p { color: var(--ink-2); font-size: 16px; max-width: 80ch; }
+.honest b { color: var(--ink); }
+
+/* ---------- Объяснимость ---------- */
+.explain { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 56px); align-items: center; }
+.explain ul { list-style: none; padding: 0; margin: 24px 0 0; display: flex; flex-direction: column; gap: 14px; }
+.explain li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; color: var(--ink-2); font-size: 16px; }
+.explain li::before { content: ""; width: 12px; height: 14px; margin-top: 6px; background: var(--amber); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: clamp(18px, 2.6vw, 28px); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); min-width: 0; }
+.panel-head { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.hex { position: relative; width: 104px; height: 120px; flex: none; display: grid; place-items: center; }
+.hex svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hex b { position: relative; font: 600 44px/1 var(--f-mono); color: var(--high); text-shadow: 0 0 22px rgba(246, 70, 93, .55); }
+.hex small { position: absolute; bottom: 24px; font-size: 11px; color: var(--muted); }
+.panel-head h3 { font: 600 15px var(--f-mono); }
+.panel-head .lvl { color: var(--high); font: 600 20px var(--f-body); margin-top: 4px; }
+.scheme { margin-top: 18px; padding: 10px 14px; border: 1px solid rgba(139, 124, 246, .35); border-left: 3px solid var(--violet); background: rgba(139, 124, 246, .10); border-radius: 0 6px 6px 0; font-size: 15px; }
+.scheme span { color: var(--violet); font-weight: 600; }
+.drivers { margin-top: 20px; }
+.drivers .lbl { font-size: 14px; font-weight: 600; }
+.dbar { display: flex; gap: 2px; height: 10px; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.dbar i { display: block; }
+.dlegend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+.dlegend span { display: inline-flex; align-items: center; gap: 6px; }
+.dlegend em { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.dlegend b { font-family: var(--f-mono); color: var(--ink); }
+.factor { margin-top: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; font-size: 14px; color: var(--ink-2); box-shadow: inset 3px 0 0 var(--high); }
+.factor .m { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.factor .g { padding: 0 7px; border-radius: 4px; line-height: 18px; }
+.factor .p { display: block; color: var(--cyan); font-size: 13px; margin-top: 4px; }
+
+/* ---------- Преимущества ---------- */
+.cmp-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 15.5px; }
+th, td { text-align: left; padding: 16px 20px; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { font: 500 14px var(--f-mono); color: var(--muted); background: var(--panel); }
+thead th.me { color: var(--amber); }
+tbody th { font-weight: 500; color: var(--ink); width: 30%; }
+tbody td { color: var(--ink-2); }
+td.me { background: rgba(240, 180, 41, .06); color: var(--ink); }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+.y, .n { font-family: var(--f-mono); font-weight: 600; margin-right: 6px; }
+.y { color: var(--low); } .n { color: var(--high); }
+
+/* ---------- Дорожная карта ---------- */
+.road { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); position: relative; }
+.road::before { content: ""; position: absolute; left: 0; right: 0; top: 21px; height: 2px; background: linear-gradient(90deg, var(--amber) 0 25%, var(--line) 25%); }
+.road li { position: relative; padding-right: 20px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.road .dot { width: 38px; height: 44px; display: grid; place-items: center; font: 700 14px var(--f-display); color: var(--muted); background: var(--panel-2);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); position: relative; }
+.road li.now .dot { background: var(--amber); color: #111; }
+.road .when { font: 500 13px var(--f-mono); color: var(--amber); margin-top: 10px; }
+.road h3 { font: 600 18px/1.35 var(--f-body); }
+.road p { color: var(--ink-2); font-size: 15px; }
+
+/* ---------- Ограничения ---------- */
+.limits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.limits div { border: 1px dashed var(--line); border-radius: 12px; padding: 20px 22px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.limits h3 { font: 600 17px var(--f-body); }
+.limits p { color: var(--ink-2); font-size: 15.5px; }
+
+/* ---------- Финал ---------- */
+.cta { position: relative; overflow: hidden; border-top: 1px solid var(--line);
+  background: radial-gradient(60% 90% at 50% 120%, rgba(240, 180, 41, .22), transparent 70%), var(--bg); text-align: left; }
+.cta .wrap { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 40px; align-items: end; }
+.cta h2 { font: 700 clamp(32px, 5.4vw, 68px)/1.04 var(--f-display); letter-spacing: -.02em; max-width: 14ch; }
+.cta p { color: var(--ink-2); }
+.cta-side { display: flex; flex-direction: column; gap: 18px; }
+.stack { display: flex; flex-wrap: wrap; gap: 8px; }
+.stack span { font: 500 13px var(--f-mono); color: var(--ink-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; background: var(--panel); }
+footer { border-top: 1px solid var(--line); padding-block: 28px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+/* ---------- Адаптив ---------- */
+@media (max-width: 1024px) {
+  .steps, .types { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .results, .explain { grid-template-columns: minmax(0, 1fr); }
+  .road { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 40px; }
+  .road::before { display: none; }
+}
+@media (max-width: 860px) {
+  .menu-btn { display: block; margin-left: 8px; }
+  .nav [data-demo] { margin-left: auto; }
+  .nav-links { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: 0; right: 0; flex-direction: column; gap: 0; margin: 0;
+    background: var(--bg); border-bottom: 1px solid var(--line); padding: 8px var(--gutter) 16px; display: none; }
+  .nav.open .nav-links { display: flex; }
+  .nav-links a { display: block; padding: 12px 0; font-size: 17px; border-bottom: 1px solid var(--line); }
+  .nav.open .menu-btn span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .nav.open .menu-btn span:nth-child(2) { opacity: 0; }
+  .nav.open .menu-btn span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+  .problem-grid, .goals { grid-template-columns: minmax(0, 1fr); }
+  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .qr-card { flex-direction: row; align-items: center; width: 100%; max-width: 440px; }
+  .qr { width: 132px; flex: none; padding: 10px; font-size: 11px; }
+  .ticker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ticker div:nth-child(2) { border-right: 0; }
+  .ticker div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .hero::after { background: linear-gradient(0deg, var(--bg) 0%, rgba(11,14,17,.78) 45%, rgba(11,14,17,.55) 100%); }
+  .cta .wrap { grid-template-columns: minmax(0, 1fr); }
+  .limits { grid-template-columns: minmax(0, 1fr); }
+}
+/* ---------- Анимации при прокрутке (включаются скриптом, только без «уменьшения движения») ---------- */
+.progress { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; width: 100%; height: 2px; z-index: 60;
+  transform-origin: 0 50%; transform: scaleX(0); background: var(--amber); box-shadow: 0 0 12px rgba(240, 180, 41, .7); pointer-events: none; }
+.nav-links a.active { color: var(--amber); }
+.anim .rv { opacity: 0; transform: translateY(40px); transition: opacity .9s cubic-bezier(.2, .7, .2, 1), transform .9s cubic-bezier(.2, .7, .2, 1);
+  transition-delay: calc(var(--i, 0) * 110ms); }
+.anim .rv.from-r { transform: translateX(70px) rotate(2deg); }
+.anim .rv.zoom { transform: scale(.92); }
+.anim .rv.in { opacity: 1; transform: none; }
+.anim .split .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; margin-bottom: -.08em; }
+.anim .split .w > span { display: inline-block; transform: translateY(110%); transition: transform 1s cubic-bezier(.2, .7, .2, 1); transition-delay: calc(var(--i) * 55ms); }
+.anim .split.in .w > span { transform: none; }
+.anim .mission blockquote .mw { color: rgba(234, 236, 239, .16); transition: color .35s; }
+.anim .mission blockquote .mw.on { color: var(--ink); }
+.anim .mission blockquote .mw.on.hot { color: var(--amber); }
+.anim .bar .t i { transform: scaleX(0); transform-origin: 0 50%; transition: transform 1.3s cubic-bezier(.2, .7, .2, 1) .25s; }
+.anim .bar:nth-child(2) .t i { transition-delay: .4s; } .anim .bar:nth-child(3) .t i { transition-delay: .55s; }
+.anim .chart.in .bar .t i { transform: none; }
+.anim .dbar i { transform: scaleX(0); transform-origin: 0 50%; transition: transform 1.1s cubic-bezier(.2, .7, .2, 1) .5s; }
+.anim .panel.in .dbar i { transform: none; }
+.anim .step::before { background: var(--panel-2); color: var(--muted); transition: background .4s, color .4s; }
+.anim .step.lit::before { background: var(--amber); color: #111; }
+.anim .step { transition: opacity .9s cubic-bezier(.2, .7, .2, 1), transform .9s cubic-bezier(.2, .7, .2, 1), border-color .4s; transition-delay: calc(var(--i, 0) * 110ms), calc(var(--i, 0) * 110ms), 0s; }
+.anim .step.lit { border-color: rgba(240, 180, 41, .45); }
+.steps-track { position: absolute; left: 0; right: 0; top: -26px; height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.steps-track i { display: block; height: 100%; background: var(--amber); transform-origin: 0 50%; transform: scaleX(var(--p, 1)); box-shadow: 0 0 10px rgba(240, 180, 41, .6); }
+.road::before { background: var(--line); }
+.road::after { content: ""; position: absolute; left: 0; top: 21px; height: 2px; width: 25%; background: var(--amber); transform-origin: 0 50%; box-shadow: 0 0 10px rgba(240, 180, 41, .6); }
+.anim .road::after { transform: scaleX(0); transition: transform 1.4s cubic-bezier(.2, .7, .2, 1) .3s; }
+.anim .road.in::after { transform: none; }
+.anim .marquee-track { animation: none; will-change: transform; }
+.hero-inner, #net { will-change: transform; }
+@media (max-width: 1024px) { .road::after, .steps-track { display: none; } }
+
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .steps, .types, .road { grid-template-columns: minmax(0, 1fr); }
+  .big-stats { grid-template-columns: minmax(0, 1fr); }
+  .bar { grid-template-columns: minmax(0, 104px) minmax(0, 1fr) 48px; font-size: 14px; }
+  .ticker div { padding: 12px 14px; }
+}
+</style>
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+<nav class="nav" id="nav">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="Traceon — в начало">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1C2127"/><path d="M32 9 L51.9 20.5 V43.5 L32 55 L12.1 43.5 V20.5 Z" fill="none" stroke="#F0B429" stroke-width="2.6" stroke-linejoin="round" opacity=".55"/><path d="M19 40 L28 30 L36 36 L45 24" fill="none" stroke="#F0B429" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="19" cy="40" r="3.6" fill="#F0B429"/><circle cx="28" cy="30" r="3" fill="#0B0E11" stroke="#F0B429" stroke-width="2.2"/><circle cx="36" cy="36" r="3" fill="#0B0E11" stroke="#F0B429" stroke-width="2.2"/><circle cx="45" cy="24" r="4.4" fill="#F0B429"/></svg>
+      <b>Traceon</b>
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#problem">Проблема</a></li>
+      <li><a href="#mission">Миссия</a></li>
+      <li><a href="#how">Как работает</a></li>
+      <li><a href="#results">Результаты</a></li>
+      <li><a href="#explain">Объяснимость</a></li>
+      <li><a href="#roadmap">Внедрение</a></li>
+    </ul>
+    <a class="btn primary" href="/demo/" data-demo>Demo <span class="arr" aria-hidden="true"></span></a>
+    <button class="menu-btn" id="menu-btn" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="nav-links"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <canvas id="net" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <div class="hero-grid">
+      <div>
+        <span class="pill"><i></i>MVP работает · Elliptic2 · 121 810 схем</span>
+        <h1>Откуда пришли деньги клиента</h1>
+        <p class="lead">Traceon — ML-сервис для банков Казахстана. Клиент выводит криптовалюту на карту, а Traceon оценивает риск отмывания в схеме переводов, объясняет причины по-русски и готовит отчёт для комплаенса.</p>
+        <div class="hero-cta">
+          <a class="btn primary" href="/demo/" data-demo>Открыть Demo <span class="arr" aria-hidden="true"></span></a>
+          <a class="btn" href="#how">Как это работает</a>
+        </div>
+      </div>
+      <aside class="qr-card" id="qr-card" aria-label="QR-код для открытия демо">
+        <div class="qr" id="qr"><span>Место для QR-кода демо</span></div>
+        <div>
+          <b>Живое демо</b>
+          <p>Наведите камеру телефона, чтобы проверить кластер в Traceon.</p>
+          <a href="/demo/" data-demo id="demo-link">Адрес появится после запуска сервера</a>
+        </div>
+      </aside>
+    </div>
+    <div class="ticker" aria-label="Метрики модели на тестовой выборке">
+      <div><small>PR-AUC</small><b class="acc">0,579</b><em>GLASS 0,208</em></div>
+      <div><small>ROC-AUC</small><b>0,940</b></div>
+      <div><small>Подозрительных в топ-1%</small><b class="up">88,5%</b><em>×39</em></div>
+      <div><small>Находим, проверив 10%</small><b class="up">78%</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>121 810 размеченных схем</span><span>196 млн переводов в сети</span><span>XGBoost · 149 признаков</span><span>подпись BIP-137</span><span>цепочка «пилинг»</span><span>дробление суммы</span><span>сбор средств</span><span>цикл</span><span>PDF для СПО в АФМ</span><span>работает без интернета</span>
+    <span>121 810 размеченных схем</span><span>196 млн переводов в сети</span><span>XGBoost · 149 признаков</span><span>подпись BIP-137</span><span>цепочка «пилинг»</span><span>дробление суммы</span><span>сбор средств</span><span>цикл</span><span>PDF для СПО в АФМ</span><span>работает без интернета</span>
+  </div>
+</div>
+
+<main>
+<section id="problem">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">Проблема</span>
+      <h2 class="h2">Существующие проверки видят только то, что уже известно</h2>
+      <p class="lead">Банк получает деньги, выведенные с криптобиржи. Чтобы понять, чистые ли они, у него сегодня есть три инструмента, и у каждого есть слепое пятно.</p>
+    </div>
+    <div class="problem-grid">
+      <article>
+        <span class="fig">Новый адрес</span>
+        <h3>Реестр ловит только известные кошельки</h3>
+        <p>АФМ вводит единый реестр криптокошельков, использованных в преступных целях. Кошелёк, созданный вчера, в него ещё не попал, и проверка по списку его пропускает.</p>
+        <p class="src">Источник: <a href="https://informburo.kz/novosti/reestr-kriptokoselkov-sviazannyx-s-prestupnoi-deiatelnostiu-sozdadut-v-kazaxstane" target="_blank" rel="noopener">Informburo</a></p>
+      </article>
+      <article>
+        <span class="fig">5 млн ₸</span>
+        <h3>Порог обходят дроблением</h3>
+        <p>Операции с цифровыми активами от 5 млн тенге подлежат обязательному мониторингу. Сумму делят на переводы ниже порога, и каждый выглядит безобидно.</p>
+        <p class="src">Источник: <a href="https://digitalbusiness.kz/2025-05-28/afm-oboznachilo-porog-po-sdelkam-v-kripte-vse-ostalnoe-budut-proveryat/amp/" target="_blank" rel="noopener">Digital Business</a></p>
+      </article>
+      <article>
+        <span class="fig">KYC</span>
+        <h3>Верификация отвечает на вопрос «кто», но не «откуда»</h3>
+        <p>Биржа знает владельца аккаунта по паспорту. История монет, которые он выводит, в KYC не видна: деньги могли пройти через десяток чужих кошельков.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="mission" id="mission">
+  <div class="wrap">
+    <span class="tag">Миссия</span>
+    <blockquote>Дать каждому банку Казахстана инструмент, который находит новые схемы отмывания раньше, чем они попадут в реестр, и объясняет каждое решение человеку, который его принимает.</blockquote>
+    <div class="goals">
+      <div class="goal">
+        <h3>Находить неизвестное</h3>
+        <p>Модель оценивает форму и окружение схемы переводов, а не сверяет адрес со списком. Поэтому она реагирует и на кошельки, которых нет ни в одной базе.</p>
+      </div>
+      <div class="goal">
+        <h3>Объяснять, а не просто блокировать</h3>
+        <p>Каждый скор раскладывается на факторы: что повысило риск, что снизило и какой тип схемы виден на графе. Решение остаётся за сотрудником банка.</p>
+      </div>
+      <div class="goal">
+        <h3>Встраиваться в госинфраструктуру</h3>
+        <p>В Казахстане создаётся Национальный центр криптовалютной аналитики, доступ к нему получат банки. Traceon задуман как ML-модуль для такой системы.</p>
+        <p class="src">Источник: <a href="https://kapital.kz/finance/152930/v-kazahstane-sozdadut-nacionalnyj-centr-kriptovalyutnoj-analitiki.html" target="_blank" rel="noopener">Kapital.kz</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">Как работает</span>
+      <h2 class="h2">Четыре шага от адреса до решения комплаенса</h2>
+    </div>
+    <div class="steps">
+      <div class="steps-track" aria-hidden="true"><i></i></div>
+      <article class="step">
+        <h3>Клиент подтверждает адрес</h3>
+        <p>Подписывает текст в своём кошельке. Traceon проверяет подпись по стандарту <code>BIP-137</code>: адрес действительно принадлежит клиенту.</p>
+      </article>
+      <article class="step">
+        <h3>Модель оценивает схему</h3>
+        <p>По адресу находится кластер и подграф переводов вокруг него. XGBoost на 149 признаках выдаёт скор от 0 до 99.</p>
+      </article>
+      <article class="step">
+        <h3>Traceon объясняет причину</h3>
+        <p>Факторы риска и смягчающие факторы, тип схемы на графе, доля влияния каждой группы признаков. Заключение пишет LLM или шаблон без интернета.</p>
+      </article>
+      <article class="step">
+        <h3>Комплаенс получает отчёт</h3>
+        <p>PDF с заключением и рекомендацией: продолжить операцию, запросить документы или рассмотреть сообщение о подозрительной операции в АФМ.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="results" style="background: var(--panel); border-block: 1px solid var(--line);">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">Результаты</span>
+      <h2 class="h2">В 2,8 раза точнее модели авторов датасета</h2>
+      <p class="lead">Тест на 12 181 схеме Elliptic2, которые модель не видела при обучении. Подозрительных среди них всего 2,3%, поэтому главная метрика — PR-AUC.</p>
+    </div>
+    <div class="results">
+      <div class="big-stats">
+        <div><b class="acc" data-count="0.579" data-dec="3">0,579</b><span>PR-AUC, у логистической регрессии 0,162</span></div>
+        <div><b data-count="0.940" data-dec="3">0,940</b><span>ROC-AUC на тесте</span></div>
+        <div><b class="up" data-count="88.5" data-dec="1" data-suf="%">88,5%</b><span>подозрительных среди 1% самых рискованных схем, в 39 раз выше среднего</span></div>
+        <div><b class="up" data-count="78" data-dec="0" data-suf="%">78%</b><span>подозрительных находит комплаенс, проверив вручную 10% схем</span></div>
+      </div>
+      <div class="chart">
+        <h3>PR-AUC на тестовой выборке</h3>
+        <p class="note">Чем выше, тем меньше ложных тревог при том же числе найденных схем</p>
+        <div class="bars">
+          <div class="bar me"><span>Traceon (XGBoost)</span><div class="t"><i style="width:57.9%"></i></div><span class="v">0,579</span></div>
+          <div class="bar"><span>GLASS, авторы датасета</span><div class="t"><i style="width:20.8%"></i></div><span class="v">0,208</span></div>
+          <div class="bar"><span>Логистическая регрессия</span><div class="t"><i style="width:16.2%"></i></div><span class="v">0,162</span></div>
+        </div>
+        <p class="caveat">GLASS обучали без признаков кластеров, поэтому сравнение ориентировочное. В уровень «высокий риск» попала 191 схема, 69% из них подозрительные.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="types">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">Типы схем</span>
+      <h2 class="h2">Форму схемы видно на графе</h2>
+      <p class="lead">Traceon распознаёт четыре типовых рисунка отмывания по реальным переводам внутри схемы. Ниже настоящие примеры из тестовой выборки и их скор.</p>
+    </div>
+    <div class="types">
+      <article class="type">
+        <svg viewBox="0 0 160 120" role="img" aria-label="Цепочка из шести кластеров">
+          <path class="flow" d="M18 92 L44 70 L70 84 L96 56 L122 66 L146 34"/>
+          <circle class="nd hub" cx="18" cy="92" r="7"/><circle class="nd on" cx="44" cy="70" r="6"/><circle class="nd on" cx="70" cy="84" r="6"/><circle class="nd on" cx="96" cy="56" r="6"/><circle class="nd on" cx="122" cy="66" r="6"/><circle class="nd on" cx="146" cy="34" r="7"/>
+        </svg>
+        <h3>Цепочка («пилинг»)</h3>
+        <p>Средства последовательно проходят через кластеры один за другим, на каждом шаге отщипывается часть.</p>
+        <p class="ex">566909973 · 6 кластеров · <b>95</b></p>
+      </article>
+      <article class="type">
+        <svg viewBox="0 0 160 120" role="img" aria-label="Один кластер раздаёт средства пяти получателям">
+          <path class="flow" d="M58 60 L120 18 M58 60 L138 46 M58 60 L138 78 M58 60 L118 104 M58 60 L82 108"/>
+          <circle class="nd hub" cx="58" cy="60" r="10"/><circle class="nd on" cx="120" cy="18" r="6"/><circle class="nd on" cx="138" cy="46" r="6"/><circle class="nd on" cx="138" cy="78" r="6"/><circle class="nd on" cx="118" cy="104" r="6"/><circle class="nd on" cx="82" cy="108" r="6"/>
+          <path class="edge" d="M22 30 L58 60"/><circle class="nd" cx="22" cy="30" r="6"/>
+        </svg>
+        <h3>Дробление суммы</h3>
+        <p>Один кластер раздаёт средства многим получателям, чтобы каждая часть была ниже порогов.</p>
+        <p class="ex">462721179 · 5 получателей · <b>93</b></p>
+      </article>
+      <article class="type">
+        <svg viewBox="0 0 160 120" role="img" aria-label="Средства собираются в один кластер от трёх отправителей">
+          <path class="flow" d="M26 22 L104 62 M20 70 L104 62 M44 108 L104 62"/>
+          <path class="edge" d="M104 62 L144 40"/>
+          <circle class="nd on" cx="26" cy="22" r="6"/><circle class="nd on" cx="20" cy="70" r="6"/><circle class="nd on" cx="44" cy="108" r="6"/><circle class="nd hub" cx="104" cy="62" r="10"/><circle class="nd" cx="144" cy="40" r="6"/>
+        </svg>
+        <h3>Сбор средств</h3>
+        <p>Кластер получает средства от многих отправителей и копит их перед выводом через сервис.</p>
+        <p class="ex">788665851 · 3 отправителя · <b>99</b></p>
+      </article>
+      <article class="type">
+        <svg viewBox="0 0 160 120" role="img" aria-label="Средства проходят по кругу через пять кластеров">
+          <path class="flow" d="M80 16 L130 46 L112 100 L48 100 L30 46 Z"/>
+          <circle class="nd hub" cx="80" cy="16" r="8"/><circle class="nd on" cx="130" cy="46" r="6"/><circle class="nd on" cx="112" cy="100" r="6"/><circle class="nd on" cx="48" cy="100" r="6"/><circle class="nd on" cx="30" cy="46" r="6"/>
+        </svg>
+        <h3>Цикл</h3>
+        <p>Деньги проходят по кругу и возвращаются к отправителю, создавая видимость оборота.</p>
+        <p class="ex">1055671244 · 5 кластеров · <b>86</b></p>
+      </article>
+    </div>
+    <div class="honest">
+      <p><b>Почему одной формы мало.</b> Среди всех схем Elliptic2 доля подозрительных у каждого типа почти одинакова: 1,5–2,7% при среднем 2,3%. Простое правило «цикл значит отмывание» не работает. Поэтому риск оценивает модель, а тип схемы помогает сотруднику понять, что он видит на графе.</p>
+    </div>
+  </div>
+</section>
+
+<section id="explain" style="background: var(--panel); border-block: 1px solid var(--line);">
+  <div class="wrap explain">
+    <div>
+      <span class="tag">Объяснимость</span>
+      <h2 class="h2">Каждый скор можно разобрать на части</h2>
+      <ul>
+        <li>Полоса «из чего складывается оценка» показывает долю каждой группы признаков в решении.</li>
+        <li>Факторы риска и смягчающие факторы сравниваются с тысячами законных схем: «больше, чем у 98% законных».</li>
+        <li>32 скрытых признака Elliptic сильно связаны с понятными показателями сети. Traceon подписывает их словами, например «сколько источников присылают средства».</li>
+        <li>Скор не выше 99: это вероятность, а не доказательство. Решение принимает сотрудник банка.</li>
+      </ul>
+    </div>
+    <div class="panel" aria-label="Пример проверки кластера 434598277">
+      <div class="panel-head">
+        <div class="hex">
+          <svg viewBox="0 0 120 138" aria-hidden="true">
+            <path d="M60 4 L114 35 V103 L60 134 L6 103 V35 Z" fill="rgba(246,70,93,.08)" stroke="#F6465D" stroke-width="2.5" stroke-linejoin="round"/>
+            <path d="M60 4 L114 35 V103 L60 134 L6 103 V35 Z" fill="none" stroke="#F6465D" stroke-width="10" opacity=".16"/>
+          </svg>
+          <b>99</b><small>из 100</small>
+        </div>
+        <div>
+          <h3>Кластер 434598277</h3>
+          <p class="lvl">Высокий риск</p>
+        </div>
+      </div>
+      <div class="drivers">
+        <span class="lbl">Из чего складывается оценка</span>
+        <div class="dbar"><i style="flex-basis:74%;background:#5E6673"></i><i style="flex-basis:25%;background:#22C3D6"></i><i style="flex-basis:1%;background:#8B7CF6;min-width:3px"></i></div>
+        <div class="dlegend">
+          <span><em style="background:#5E6673"></em>Скрытые характеристики кластеров <b>74%</b></span>
+          <span><em style="background:#22C3D6"></em>Связи с сетью <b>25%</b></span>
+          <span><em style="background:#8B7CF6"></em>Форма схемы <b>1%</b></span>
+        </div>
+      </div>
+      <div class="factor">
+        <div class="m"><span class="g" style="background:#262B33;color:#B4BBC5">Скрытые характеристики кластеров</span>влияние сильное, 31% оценки</div>
+        Характеристика №28, наибольшая в схеме: 6. Больше, чем у 98% законных схем. Обычно у законных 1, у подозрительных 3.
+      </div>
+      <div class="factor">
+        <div class="m"><span class="g" style="background:rgba(34,195,214,.12);color:#22C3D6">Связи кластеров с сетью</span>влияние слабое, 4% оценки</div>
+        Характеристика №25, в среднем по схеме: 50,5. Больше, чем у 96% законных схем.
+        <span class="p">Связана с тем, сколько разных источников присылают средства кластерам схемы (корреляция 0,7)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="advantages">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">Преимущества</span>
+      <h2 class="h2">Чем Traceon дополняет то, что у банка уже есть</h2>
+    </div>
+    <div class="cmp-wrap">
+      <table>
+        <thead><tr><th scope="col">Задача</th><th scope="col">Реестр кошельков</th><th scope="col">Пороговые правила</th><th scope="col" class="me">Traceon</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Новый кошелёк, которого нет в базах</th><td><span class="n">нет</span>пропускает</td><td><span class="n">нет</span>если сумма ниже порога</td><td class="me"><span class="y">да</span>оценивает схему вокруг адреса</td></tr>
+          <tr><th scope="row">Сумма раздроблена ниже 5 млн ₸</th><td><span class="n">нет</span></td><td><span class="n">нет</span>каждая часть ниже порога</td><td class="me"><span class="y">да</span>видит дробление в структуре</td></tr>
+          <tr><th scope="row">Объяснение для сотрудника</th><td>запись в реестре</td><td>«превышен порог»</td><td class="me">факторы, доли влияния, тип схемы на графе</td></tr>
+          <tr><th scope="row">Документ для решения</th><td><span class="n">нет</span></td><td><span class="n">нет</span></td><td class="me"><span class="y">да</span>PDF-отчёт с рекомендацией</td></tr>
+          <tr><th scope="row">Работа в контуре банка</th><td><span class="y">да</span></td><td><span class="y">да</span></td><td class="me"><span class="y">да</span>Docker, без обязательного интернета</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap" style="background: var(--panel); border-block: 1px solid var(--line);">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">Внедрение</span>
+      <h2 class="h2">От студенческого MVP к модулю национальной системы</h2>
+    </div>
+    <ol class="road">
+      <li class="now"><span class="dot">1</span><span class="when">Сейчас</span><h3>MVP на Elliptic2</h3><p>Модель, веб-интерфейс, подпись BIP-137, PDF-отчёты и журнал проверок. Bitcoin, открытый датасет.</p></li>
+      <li><span class="dot">2</span><span class="when">Пилот</span><h3>Данные банка</h3><p>Переобучение на обезличенных операциях банка с открытыми признаками: у факторов появятся понятные названия.</p></li>
+      <li><span class="dot">3</span><span class="when">Расширение</span><h3>USDT в сети Tron</h3><p>Основной актив P2P-торговли в регионе. Та же логика подграфов на другой сети.</p></li>
+      <li><span class="dot">4</span><span class="when">Интеграция</span><h3>API для государства</h3><p>Реестр АФМ как стартовые метки, Traceon находит соседние неизвестные кластеры и отдаёт скор банкам.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">Ограничения</span>
+      <h2 class="h2">Что важно знать о текущей версии</h2>
+    </div>
+    <div class="limits">
+      <div><h3>Только Bitcoin</h3><p>Elliptic2 содержит переводы Bitcoin. Для USDT в сети Tron модель нужно переобучить на новых данных.</p></div>
+      <div><h3>Признаки обезличены</h3><p>Elliptic не раскрывает смысл большинства признаков, поэтому часть факторов показана номерами. На данных банка этого ограничения не будет.</p></div>
+      <div><h3>Разметка датасета, а не банка</h3><p>Метки «подозрительный» поставил Elliptic. Перед внедрением качество нужно подтвердить на пилоте с реальными решениями комплаенса.</p></div>
+      <div><h3>Скор не доказательство</h3><p>Traceon показывает сходство со схемами отмывания. Окончательное решение и сообщение в АФМ остаются за сотрудником банка.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<section class="cta">
+  <div class="wrap">
+    <h2>Новые схемы находятся до того, как попадут в реестр</h2>
+    <div class="cta-side">
+      <p>Traceon — проект для Второго Республиканского конкурса студенческих проектов Ассоциации банков Республики Казахстан. Треки AI for Finance, Crypto/Blockchain и KYC/AML.</p>
+      <div class="stack"><span>Python</span><span>XGBoost</span><span>FastAPI</span><span>PostgreSQL</span><span>Docker</span><span>vis-network</span><span>BIP-137</span></div>
+      <a class="btn primary" href="#top" style="align-self:flex-start">Наверх</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Traceon · 2026</span>
+    <span>Данные: Elliptic2 (Bellei et al., 2024). Метрики — тестовая выборка, 12 181 схема.</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(() => {
+  "use strict";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Демо: адрес из <meta name="traceon-demo"> или этот сервер + /demo/. QR строится из того же адреса. */
+  (() => {
+    const meta = document.querySelector('meta[name="traceon-demo"]');
+    const preset = meta && meta.content.trim();
+    const ownServer = /^https?:$/.test(location.protocol) && !/(claude|anthropic)/i.test(location.hostname);
+    const url = preset || (ownServer ? new URL("/demo/", location.origin).href : "");
+    const link = document.getElementById("demo-link");
+    document.querySelectorAll("[data-demo]").forEach((a) => {
+      if (url) a.href = url;
+      else { a.href = "#qr-card"; }
+    });
+    if (!url) return;
+    link.textContent = url.replace(/^https?:\/\//, "");
+    const box = document.getElementById("qr");
+    if (window.QRCode) {
+      try {
+        new QRCode(box, { text: url, width: 400, height: 400, colorDark: "#0B0E11", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+        box.classList.add("ready");
+        box.setAttribute("role", "img");
+        box.setAttribute("aria-label", "QR-код: " + url);
+      } catch (_) { /* остаётся место под QR */ }
+    }
+  })();
+
+  /* Мобильное меню */
+  const nav = document.getElementById("nav"), mb = document.getElementById("menu-btn");
+  mb.addEventListener("click", () => {
+    const open = nav.classList.toggle("open");
+    mb.setAttribute("aria-expanded", String(open));
+  });
+  document.querySelectorAll(".nav-links a").forEach((a) => a.addEventListener("click", () => {
+    nav.classList.remove("open"); mb.setAttribute("aria-expanded", "false");
+  }));
+
+  /* Счётчики: значения видны сразу, при появлении на экране число «досчитывается» */
+  const fmt = (v, d) => v.toFixed(d).replace(".", ",");
+  if (!reduce && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      io.unobserve(e.target);
+      const el = e.target, to = parseFloat(el.dataset.count), d = +el.dataset.dec, suf = el.dataset.suf || "";
+      const t0 = performance.now(), dur = 1100;
+      const step = (t) => {
+        const k = Math.min(1, (t - t0) / dur), ease = 1 - Math.pow(1 - k, 3);
+        el.textContent = fmt(to * ease, d) + suf;
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }), { threshold: 0.6 });
+    document.querySelectorAll("[data-count]").forEach((el) => io.observe(el));
+  }
+
+  /* Герой: сеть кластеров, по которой бежит след перевода */
+  const cv = document.getElementById("net"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, dpr = 1, nodes = [], edges = [], path = [], seg = 0, segT = 0, flagged = -1, flagT = 0, visible = true, hold = 0;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+
+  function build() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const wide = W > 860, x0 = wide ? W * 0.42 : 0, n = wide ? 46 : 30;
+    nodes = [];
+    for (let i = 0; i < n; i++) nodes.push({ x: rnd(x0 + 20, W - 20), y: rnd(30, H - 30), r: rnd(2, 4.5), lit: 0, ph: rnd(0, 6.28) });
+    edges = [];
+    nodes.forEach((a, i) => {
+      const near = nodes.map((b, j) => [j, Math.hypot(a.x - b.x, a.y - b.y)]).filter(([j]) => j !== i).sort((p, q) => p[1] - q[1]).slice(0, 3);
+      near.forEach(([j]) => { if (!edges.some(([p, q]) => (p === i && q === j) || (p === j && q === i))) edges.push([i, j]); });
+    });
+    newTrace();
+  }
+  function neighbors(i) { return edges.filter(([a, b]) => a === i || b === i).map(([a, b]) => (a === i ? b : a)); }
+  function newTrace() {
+    let cur = Math.floor(Math.random() * nodes.length);
+    path = [cur];
+    for (let k = 0; k < 7; k++) {
+      const opts = neighbors(cur).filter((j) => !path.includes(j));
+      if (!opts.length) break;
+      cur = opts[Math.floor(Math.random() * opts.length)];
+      path.push(cur);
+    }
+    seg = 0; segT = 0; flagged = -1; hold = 0;
+    nodes.forEach((n) => (n.lit = 0));
+    nodes[path[0]].lit = 1;
+  }
+  function hex(x, y, r) {
+    ctx.beginPath();
+    for (let k = 0; k < 6; k++) { const a = Math.PI / 3 * k - Math.PI / 2; ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); }
+    ctx.closePath();
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(127,137,150,.16)";
+    edges.forEach(([a, b]) => { ctx.beginPath(); ctx.moveTo(nodes[a].x, nodes[a].y); ctx.lineTo(nodes[b].x, nodes[b].y); ctx.stroke(); });
+    // пройденный след
+    ctx.strokeStyle = "rgba(240,180,41,.75)"; ctx.lineWidth = 2;
+    for (let k = 0; k < seg && k < path.length - 1; k++) {
+      const a = nodes[path[k]], b = nodes[path[k + 1]];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    // текущий отрезок и «пакет»
+    if (seg < path.length - 1) {
+      const a = nodes[path[seg]], b = nodes[path[seg + 1]];
+      const px = a.x + (b.x - a.x) * segT, py = a.y + (b.y - a.y) * segT;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(px, py); ctx.stroke();
+      const g = ctx.createRadialGradient(px, py, 0, px, py, 16);
+      g.addColorStop(0, "rgba(240,180,41,.9)"); g.addColorStop(1, "rgba(240,180,41,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, 16, 0, 6.29); ctx.fill();
+    }
+    nodes.forEach((n, i) => {
+      const tw = 0.5 + 0.5 * Math.sin(t / 900 + n.ph);
+      if (i === flagged) {
+        const pulse = (t - flagT) / 1000;
+        ctx.strokeStyle = `rgba(246,70,93,${Math.max(0, .7 - (pulse % 1.4) / 2)})`; ctx.lineWidth = 2;
+        hex(n.x, n.y, 12 + (pulse % 1.4) * 18); ctx.stroke();
+        ctx.fillStyle = "#F6465D"; hex(n.x, n.y, 9); ctx.fill();
+        ctx.font = "600 12px 'JetBrains Mono', monospace"; ctx.fillStyle = "#F6465D";
+        ctx.fillText("риск 93", n.x + 16, n.y - 12);
+      } else if (n.lit) {
+        ctx.fillStyle = "#F0B429"; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 2, 0, 6.29); ctx.fill();
+      } else {
+        ctx.fillStyle = `rgba(180,187,197,${0.25 + tw * 0.3})`; ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 6.29); ctx.fill();
+      }
+    });
+  }
+  let last = 0;
+  function frame(t) {
+    if (!visible) { last = t; requestAnimationFrame(frame); return; }
+    const dt = Math.min(64, t - (last || t)); last = t;
+    if (seg < path.length - 1) {
+      segT += dt / 650;
+      if (segT >= 1) { segT = 0; seg++; nodes[path[seg]].lit = 1; if (seg === path.length - 1) { flagged = path[seg]; flagT = t; } }
+    } else if ((hold += dt) > 3200) newTrace();
+    draw(t);
+    requestAnimationFrame(frame);
+  }
+  build();
+  if (reduce) {
+    seg = path.length - 1; path.forEach((i) => (nodes[i].lit = 1)); flagged = path[path.length - 1]; flagT = 0; draw(400);
+  } else {
+    requestAnimationFrame(frame);
+    if ("IntersectionObserver" in window) new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(cv);
+  }
+  /* ---------- Анимации при прокрутке ---------- */
+  if (!reduce && "IntersectionObserver" in window) {
+    const root = document.documentElement;
+    root.classList.add("anim");
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+    // заголовки — по словам
+    $$(".h2, .cta h2").forEach((h) => {
+      const words = h.textContent.trim().split(/\s+/);
+      h.innerHTML = words.map((w, i) => `<span class="w"><span style="--i:${i}">${w}</span></span>`).join(" ");
+      h.classList.add("split");
+    });
+    // слова миссии, которые загораются по мере прокрутки
+    const quote = document.querySelector(".mission blockquote");
+    const qWords = quote.textContent.trim().split(/\s+/);
+    const hot = new Set(["новые", "схемы", "отмывания", "объясняет"]);
+    quote.innerHTML = qWords.map((w) => `<span class="mw${hot.has(w) ? " hot-w" : ""}">${w}</span>`).join(" ");
+    const mw = $$(".mission blockquote .mw");
+
+    // элементы, которые проявляются каскадом
+    const groups = [
+      [".sec-head > :not(.h2)", false], [".mission .tag", false], [".problem-grid article", true], [".goal", true],
+      [".step", true], [".big-stats > div", true], [".type", true], [".honest", false],
+      [".explain > div:first-child > :not(.h2)", true], [".cmp-wrap", false], [".road li", true], [".limits > div", true],
+      [".cta-side > *", true], ["footer .wrap > *", true],
+    ];
+    groups.forEach(([sel, stagger]) => $$(sel).forEach((el, i) => {
+      el.classList.add("rv");
+      if (stagger) el.style.setProperty("--i", i % 4);
+    }));
+    document.querySelector(".chart").classList.add("rv", "zoom");
+    document.querySelector(".explain .panel").classList.add("rv", "from-r");
+
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    }), { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    $$(".rv, .split, .road").forEach((el) => io.observe(el));
+
+    // привязанные к прокрутке эффекты
+    const progress = document.getElementById("progress");
+    const heroEl = document.querySelector(".hero"), heroInner = document.querySelector(".hero-inner");
+    const steps = document.querySelector(".steps"), stepEls = $$(".step");
+    const links = $$(".nav-links a"), secs = links.map((a) => document.querySelector(a.getAttribute("href")));
+    const track = document.querySelector(".marquee-track");
+    const clamp = (v) => Math.max(0, Math.min(1, v));
+    let mx = 0, lastY = scrollY, vel = 0, dir = 1;
+
+    const tick = () => {
+      const y = scrollY, vh = innerHeight;
+      const docH = root.scrollHeight - vh;
+      progress.style.transform = `scaleX(${docH > 0 ? y / docH : 0})`;
+      // у самого низа страницы раскрываем всё, до чего наблюдатель не дотянулся
+      if (y >= docH - 4) document.querySelectorAll(".rv:not(.in), .split:not(.in), .road:not(.in)").forEach((el) => el.classList.add("in"));
+
+      // герой: параллакс и затухание
+      const hh = heroEl.offsetHeight;
+      if (y < hh) {
+        const k = y / hh;
+        cv.style.transform = `translate3d(0, ${y * 0.35}px, 0)`;
+        heroInner.style.transform = `translate3d(0, ${y * 0.18}px, 0)`;
+        heroInner.style.opacity = String(1 - k * 0.85);
+      }
+
+      // слова миссии
+      const qr = quote.getBoundingClientRect();
+      const qp = clamp((vh * 0.85 - qr.top) / (qr.height + vh * 0.3));
+      const lit = Math.round(qp * mw.length);
+      mw.forEach((w, i) => { w.classList.toggle("on", i < lit); w.classList.toggle("hot", i < lit && w.classList.contains("hot-w")); });
+
+      // линия шагов
+      const sr = steps.getBoundingClientRect();
+      const sp = clamp((vh * 0.8 - sr.top) / (sr.height + vh * 0.2));
+      steps.style.setProperty("--p", sp.toFixed(3));
+      stepEls.forEach((s, i) => s.classList.toggle("lit", sp >= (i + 0.35) / stepEls.length));
+
+      // активный раздел в меню
+      let cur = -1;
+      secs.forEach((s, i) => { if (s && s.getBoundingClientRect().top < vh * 0.35) cur = i; });
+      links.forEach((a, i) => a.classList.toggle("active", i === cur));
+
+      // бегущая строка: скорость и направление следуют за прокруткой
+      const dy = y - lastY; lastY = y;
+      if (dy !== 0) dir = dy > 0 ? 1 : -1;
+      vel = vel * 0.9 + Math.min(40, Math.abs(dy)) * 0.1;
+      const half = track.scrollWidth / 2;
+      mx -= (0.45 + vel * 0.9) * dir;
+      if (half > 0) { if (-mx >= half) mx += half; if (mx > 0) mx -= half; }
+      track.style.transform = `translate3d(${mx}px, 0, 0)`;
+
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { build(); if (reduce) { seg = path.length - 1; path.forEach((i) => (nodes[i].lit = 1)); flagged = path[path.length - 1]; draw(400); } }, 150); });
+})();
+</script>
+
+</body>
+</html>
