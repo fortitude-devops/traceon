@@ -38,6 +38,11 @@
   <img src="docs/landing.png" alt="Сайт проекта Traceon" width="900">
 </p>
 
+<p align="center">
+  <a href="https://macbook-pro-nurbol.tail18e959.ts.net/"><b>Сайт проекта</b></a> ·
+  <a href="https://macbook-pro-nurbol.tail18e959.ts.net/demo/"><b>Живое демо</b></a>
+</p>
+
 > Проект для **Второго Республиканского конкурса студенческих проектов Ассоциации банков РК** (2026).
 > Треки: AI for Finance · Crypto/Blockchain · KYC/AML.
 
@@ -117,8 +122,8 @@ Traceon находит схему вокруг кошелька: средств�
 
 | Адрес | Что там |
 |---|---|
-| `/` | сайт проекта: проблема, миссия, результаты, план внедрения, QR-код на демо |
-| `/demo/` | скоринг: проверка кластера, граф, факторы, PDF-отчёт, журнал |
+| [`/`](https://macbook-pro-nurbol.tail18e959.ts.net/) | сайт проекта: проблема, миссия, результаты, план внедрения, QR-код на демо |
+| [`/demo/`](https://macbook-pro-nurbol.tail18e959.ts.net/demo/) | скоринг: проверка кластера, граф, факторы, PDF-отчёт, журнал |
 | `/docs` | интерактивная документация API (Swagger) |
 
 <p align="center">
