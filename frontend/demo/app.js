@@ -103,8 +103,11 @@ async function loadDemo() {
     $("chips").innerHTML = demo.map((d) =>
       `<button type="button" class="chip" style="--c:${LEVEL_COLOR[d.level]}" data-q="${esc(d.cl_id)}">
         <span>${esc(d.scheme || LEVEL_NAME[d.level])}</span><span class="cid">${esc(d.cl_id)}</span></button>`).join("");
+    $("empty-examples").innerHTML = demo.map((d) =>
+      `<button type="button" class="ex-card" style="--c:${LEVEL_COLOR[d.level]}" data-q="${esc(d.cl_id)}">
+        <b>${esc(d.scheme || LEVEL_NAME[d.level])}</b><span>${esc(d.cl_id)}</span></button>`).join("");
     $("examples").hidden = false;
-    $("chips").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#chips .chip, #empty-examples .ex-card").forEach((b) => b.addEventListener("click", () => {
       $("query").value = b.dataset.q;
       runCheck();
     }));
@@ -134,10 +137,12 @@ $("sig-form").addEventListener("submit", async (ev) => {
     const r = await api("/api/verify-signature", { method: "POST", body: JSON.stringify(body) });
     if (r.valid) {
       verifiedOwnership = body;
+      setSigState(true);
       out.classList.add("ok");
       out.textContent = `Подпись верна: клиент владеет адресом, тип адреса — ${r.address_type}. Подтверждение попадёт в отчёт.`;
     } else {
       verifiedOwnership = null;
+      setSigState(false);
       out.classList.add("bad");
       out.textContent = r.error;
     }
@@ -158,6 +163,7 @@ async function runCheck() {
   const btn = $("check-btn");
   btn.disabled = true;
   btn.textContent = "Проверяю…";
+  $("result").classList.add("loading");
   try {
     const body = { query: q };
     if (verifiedOwnership) body.ownership = verifiedOwnership;
@@ -171,6 +177,7 @@ async function runCheck() {
   } finally {
     btn.disabled = false;
     btn.textContent = "Проверить";
+    $("result").classList.remove("loading");
   }
 }
 
@@ -248,6 +255,9 @@ function renderResult(r) {
     el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
   });
   renderDrivers(r.reasons.groups);
+  $("c-risk").textContent = r.reasons.risk.length;
+  $("c-mitigating").textContent = r.reasons.mitigating.length;
+  selectTab("risk");
   $("r-risk").innerHTML = factorItems(r.reasons.risk, "Существенных факторов риска нет.");
   $("r-mitigating").innerHTML = factorItems(r.reasons.mitigating, "Смягчающих факторов нет.");
   const note = $("r-hidden-note");
@@ -258,8 +268,8 @@ function renderResult(r) {
   const bl = $("r-blacklist");
   bl.hidden = r.matched_by !== "cluster";
   bl.disabled = false;
-  bl.textContent = "Внести кластер в чёрный список";
-  $("result").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  bl.textContent = "В чёрный список";
+  $("report").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
 
 $("r-blacklist").addEventListener("click", async () => {
@@ -268,7 +278,7 @@ $("r-blacklist").addEventListener("click", async () => {
   btn.disabled = true;
   try {
     await api("/api/blacklist", { method: "POST", body: JSON.stringify({ cl_id: current.query, source: "внутренний список банка", reason: "внесён по итогам проверки" }) });
-    btn.textContent = "Кластер внесён в чёрный список";
+    btn.textContent = "В чёрном списке";
     $("query").value = current.query;
     runCheck();
   } catch (e) {
@@ -370,3 +380,32 @@ function highlightPattern(p, scroll) {
   }));
   if (scroll) $("graph").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
 }
+
+/* ---------- Вкладки, подпись, горячая клавиша ---------- */
+const TAB_GROUPS = { risk: ["risk", "mitigating"], mitigating: ["risk", "mitigating"], history: ["history", "model"], model: ["history", "model"] };
+function selectTab(name) {
+  (TAB_GROUPS[name] || []).forEach((n) => {
+    const on = n === name;
+    const t = $(`t-${n}`), panel = $(`tab-${n}`);
+    t.classList.toggle("active", on);
+    t.setAttribute("aria-selected", String(on));
+    panel.hidden = !on;
+  });
+}
+document.querySelectorAll(".tab[data-tab]").forEach((t) => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+
+function setSigState(ok) {
+  const st = $("sig-state");
+  st.textContent = ok ? "подтверждено" : "подпись не прошла";
+  st.classList.toggle("ok", ok);
+}
+
+// «/» — к поиску, как в эксплорерах
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (document.activeElement && document.activeElement.tagName) || "";
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  e.preventDefault();
+  $("query").focus();
+  $("query").select();
+});

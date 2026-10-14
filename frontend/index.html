@@ -685,6 +685,14 @@ footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wr
       else { a.href = "#qr-card"; }
     });
     if (!url) return;
+    // Локальный адрес (localhost, 127.0.0.1, домашняя сеть) с телефона не откроется:
+    // QR не рисуем, пока не задан публичный адрес в <meta name="traceon-demo">.
+    const host = new URL(url).hostname;
+    const isLocal = /^(localhost|0\.0\.0\.0|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)/.test(host) || host.endsWith(".local");
+    if (isLocal) {
+      link.textContent = "QR появится на публичном адресе (откройте сайт по ссылке Tailscale)";
+      return;
+    }
     link.textContent = url.replace(/^https?:\/\//, "");
     const box = document.getElementById("qr");
     if (window.QRCode) {
